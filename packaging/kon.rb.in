@@ -1,0 +1,49 @@
+class Kon < Formula
+  desc "One command to reach a private EKS cluster or RDS database over SSM"
+  homepage "https://github.com/tibatko509/kon"
+  url "https://github.com/tibatko509/kon/archive/refs/tags/v__VERSION__.tar.gz"
+  sha256 "__SHA256__"
+  license "MIT"
+
+  depends_on "fzf"
+
+  uses_from_macos "zsh"
+
+  def install
+    pkgshare.install "init.zsh", "kon.zsh", "prompt.zsh", "VERSION", "README.md"
+    (pkgshare/"scripts").install "scripts/install.zsh"
+    doc.install "docs/kon-architecture.png"
+  end
+
+  def caveats
+    <<~EOS
+      kon is a set of zsh functions, so one line in ~/.zshrc loads it:
+
+        source #{opt_pkgshare}/init.zsh
+
+      Run the packaged installer once to write that block for you, in the right
+      place after compinit:
+
+        #{opt_pkgshare}/scripts/install.zsh
+
+      Then restart your shell, or run: exec zsh
+
+      AWS CLI v2 and the Session Manager plugin are not Homebrew formulae:
+
+        brew install awscli
+        brew install --cask session-manager-plugin
+
+      kubectl is only needed for clusters, not for databases:
+
+        brew install kubernetes-cli
+
+      Run `kon doctor` to see what is still missing.
+    EOS
+  end
+
+  test do
+    assert_match "kon #{version}", shell_output("zsh -f -c 'source #{opt_pkgshare}/init.zsh && kon --version'")
+    assert_match "18000-18999", shell_output("zsh -f -c 'source #{opt_pkgshare}/init.zsh && kon --help' 2>&1")
+    assert_path_exists pkgshare/"kon.zsh"
+  end
+end

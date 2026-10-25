@@ -18,3 +18,6 @@ node_modules/
 
 # Release artifacts, built by scripts/package.zsh and uploaded by the release job
 dist/
+
+# Rendered formulae, built by scripts/render-formula.zsh
+build/
