@@ -1,5 +1,17 @@
 # Changelog
 
+Releases from 1.0.0 onward are generated from the Conventional Commit
+history by semantic-release. Do not edit released sections by hand.
+
+# [1.8.0](https://github.com/tibatko509/kon/compare/v1.7.1...v1.8.0) (2026-10-25)
+
+
+### Features
+
+* **packaging:** ship a Homebrew formula and sync it to the tap ([77e0801](https://github.com/tibatko509/kon/commit/77e0801ffe3ed0af49ccdffdd36767f666a341de))
+
+# Changelog
+
 Releases from here on are generated from Conventional Commits by
 semantic-release. Released sections are not edited by hand.
 
