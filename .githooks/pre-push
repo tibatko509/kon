@@ -1,0 +1,144 @@
+#!/usr/bin/env sh
+
+protected_branch="main"
+committed_patterns="$(dirname -- "$0")/leak-patterns"
+local_patterns="${KON_LEAK_PATTERNS:-$HOME/.config/kon/leak-patterns}"
+status=0
+
+hits() {
+  pat="$1"
+  shift
+  if [ "$#" -eq 0 ]; then
+    git grep -nIiE -e "$pat" -- . ':!node_modules' 2>/dev/null | cut -d: -f1,2
+  else
+    for rev in "$@"; do
+      git grep -nIiE -e "$pat" "$rev" -- . ':!node_modules' 2>/dev/null | cut -d: -f2,3
+    done | sort -u
+  fi
+}
+
+scan() {
+  what="$1"
+  shift
+  report=""
+  seen=""
+  for pf in "$committed_patterns" "$local_patterns"; do
+    [ -r "$pf" ] || continue
+    [ "$pf" = "$seen" ] && continue
+    seen="$pf"
+    n=0
+    while IFS= read -r pat || [ -n "$pat" ]; do
+      n=$((n + 1))
+      [ -n "$pat" ] || continue
+      hit=$(hits "$pat" "$@" | sed "s|^|  |; s|\$|   (${pf} line ${n})|")
+      [ -z "$hit" ] && continue
+      report="${report}${hit}
+"
+    done < "$pf"
+  done
+  [ -z "$report" ] && return 0
+  printf '\n!! pre-push: %s matches a leak pattern.\n\n%s\n' "$what" "$report" >&2
+  cat >&2 <<'EOF'
+   Only file:line is printed, never the matching text: it may be the very value
+   this guard is meant to keep out of the repository. Fix the value, or narrow
+   the pattern if the hit is a false positive.
+
+EOF
+  return 1
+}
+
+scan_messages() {
+  range="$1"
+  report=""
+  seen=""
+  for pf in "$committed_patterns" "$local_patterns"; do
+    [ -r "$pf" ] || continue
+    [ "$pf" = "$seen" ] && continue
+    seen="$pf"
+    hit=$(git log --format='%h %s%n%b' "$range" 2>/dev/null \
+          | grep -IiE -f "$pf" 2>/dev/null | sed "s|^|  |; s|\$|   (${pf})|")
+    [ -z "$hit" ] && continue
+    report="${report}${hit}
+"
+  done
+  [ -z "$report" ] && return 0
+  cat >&2 <<EOF
+
+!! pre-push: a commit message in this push matches a leak pattern.
+
+$report
+
+   A message cannot be edited after it is pushed without rewriting history.
+   Amend or rebase now: git rebase -i --root, or git commit --amend.
+
+EOF
+  return 1
+}
+
+if ! cat "$committed_patterns" "$local_patterns" 2>/dev/null | grep -q .; then
+  cat >&2 <<EOF
+
+!! pre-push: no leak pattern file is readable, so nothing can be checked.
+
+   Expected ${committed_patterns}, shipped next to this hook, or
+   ${local_patterns} (KON_LEAK_PATTERNS changes that path).
+
+   Refusing the push instead of passing it unchecked.
+
+EOF
+  exit 1
+fi
+
+zero="0000000000000000000000000000000000000000"
+
+while read -r _local_ref local_sha remote_ref remote_sha; do
+  [ -n "$remote_ref" ] || continue
+
+  case "$remote_ref" in
+    "refs/heads/${protected_branch}")
+      if [ "${KON_ALLOW_MAIN_PUSH:-0}" = "1" ]; then
+        printf '>> pre-push: KON_ALLOW_MAIN_PUSH=1, allowing this push to %s.\n' \
+          "$protected_branch" >&2
+      else
+        cat >&2 <<EOF
+
+!! pre-push: direct pushes to "${protected_branch}" are disabled.
+
+   Use a branch and a pull request:
+
+     git switch -c my-change
+     git push -u origin my-change
+     gh pr create --fill && gh pr merge --merge
+
+   Merge, never squash: squashing rewrites the commits and drops their GPG
+   signatures. A merge keeps them, and GitHub signs the merge commit itself.
+
+   If you really mean it:  KON_ALLOW_MAIN_PUSH=1 git push origin ${protected_branch}
+
+EOF
+        status=1
+      fi
+      ;;
+  esac
+
+  if [ "$local_sha" != "$zero" ]; then
+    if [ "$remote_sha" = "$zero" ]; then
+      if git rev-parse --verify --quiet "origin/${protected_branch}" >/dev/null; then
+        range="origin/${protected_branch}..${local_sha}"
+      else
+        range="${local_sha}"
+      fi
+    else
+      range="${remote_sha}..${local_sha}"
+    fi
+    scan_messages "$range" || status=1
+    revs="$(git rev-list "$range" 2>/dev/null)"
+    if [ -n "$revs" ]; then
+      scan "content in the commits being pushed" $revs || status=1
+    fi
+  fi
+done
+
+scan "the working tree" || status=1
+
+exit $status

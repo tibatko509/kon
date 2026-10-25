@@ -1,0 +1,35 @@
+{
+  "repositoryUrl": "https://github.com/tibatko509/kon",
+  "branches": ["main"],
+  "tagFormat": "v${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md",
+        "changelogTitle": "# Changelog\n\nReleases from 1.0.0 onward are generated from the Conventional Commit\nhistory by semantic-release. Do not edit released sections by hand."
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "printf '%s\\n' '${nextRelease.version}' > VERSION && ./scripts/package.zsh"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md", "VERSION"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": ["dist/kon-*.tar.gz", "dist/kon_*_all.deb"]
+      }
+    ]
+  ]
+}

@@ -1,0 +1,160 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    # Ubuntu only, deliberately: on a PRIVATE repo macOS runners bill at a 10x
+    # minute multiplier, and nothing under test is macOS-specific. The suite
+    # needs no AWS credentials, no kubectl and no cluster.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install zsh and lsof
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends zsh lsof
+
+      - name: Versions
+        run: |
+          zsh --version
+          /usr/bin/python3 --version
+          lsof -v 2>&1 | head -2 || true
+
+      - name: Syntax check every shell file
+        run: |
+          set -e
+          for f in ./*.zsh ./test/*.zsh ./scripts/*.zsh; do
+            echo "zsh -n $f"
+            zsh -n "$f"
+          done
+
+      - name: Tests
+        run: ./test/run.zsh
+
+      - name: Assert no real identifier is committed
+        # Second line of defence: the suite only checks *.zsh, this checks the
+        # whole tree including docs and fixtures.
+        #
+        # Matches what a REAL value looks like rather than allow-listing every
+        # placeholder, so adding a new example to the docs cannot break the build
+        # and cannot quietly widen the hole either.
+        run: |
+          fail=0
+
+          # Real EKS endpoint ids are exactly 32 uppercase hex characters.
+          # Every placeholder here is deliberately shorter and non-hex.
+          if grep -rnIE '[0-9A-F]{32}\.gr7\.' --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist . ; then
+            echo "::error::a real EKS endpoint is committed"
+            fail=1
+          fi
+
+          # Only obviously-fictional SSO subdomains are permitted.
+          if grep -rniIE '[a-z0-9-]+\.awsapps\.com' --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist . \
+               | grep -viE '(demo|example|alpha|beta|acme|test)\.awsapps\.com' ; then
+            echo "::error::a real SSO start URL is committed"
+            fail=1
+          fi
+
+          # 12-digit AWS account ids. The fixtures use repeated digits, which no
+          # real account does.
+          if grep -rnIE '(^|[^0-9])[0-9]{12}([^0-9]|$)' --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist . \
+               | grep -vE '(0{12}|1{12}|2{12}|3{12}|4{12}|5{12}|6{12}|7{12}|8{12}|9{12})' ; then
+            echo "::error::what looks like a real AWS account id is committed"
+            fail=1
+          fi
+
+          [ "$fail" = 0 ] && echo clean
+          exit $fail
+
+      # The suite proves the shell code; these steps prove the artifact a user
+      # installs from the release.
+      - name: Build the tarball and the Debian package
+        run: |
+          ./scripts/package.zsh
+          ls -l dist/kon-*.tar.gz dist/kon_*_all.deb
+          dpkg-deb --info dist/kon_*_all.deb
+
+      - name: Install the .deb and use the packaged copy
+        run: |
+          sudo apt-get install -y ./dist/kon_*_all.deb
+          out="$(zsh -f -c 'source /usr/share/kon/init.zsh && kon --version')"
+          echo "$out"
+          test "$out" = "kon $(cat VERSION)"
+          zsh -f -c 'source /usr/share/kon/init.zsh && zmodload -F zsh/net/tcp b:ztcp'
+
+      - name: Remove the .deb and confirm it left nothing behind
+        run: |
+          sudo apt-get remove -y kon
+          test ! -e /usr/share/kon
+          zsh -f -c 'print -r -- "zsh -f still starts"'
+
+  release:
+    # Only ever after the suite is green, so a broken commit cannot cut a tag.
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # push the tag, the release and the changelog commit
+      issues: write          # semantic-release comments on resolved issues
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # semantic-release derives the next version from the full commit and
+          # tag history; a shallow clone makes it think every push is 1.0.0.
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # packaging runs inside semantic-release, and package.zsh is zsh.
+      - name: Install zsh for the packaging step
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends zsh
+
+      # Without this the release commit is unsigned, and GitHub shows it as
+      # Unverified next to a history where every other commit is signed. The key
+      # is dedicated to CI: the personal signing key never leaves the laptop.
+      - name: Import the release bot signing key
+        env:
+          BOT_GPG_PRIVATE_KEY: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+        run: |
+          set -e
+          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+          # The key carries no passphrase, so there is nothing to prompt for.
+          # Loopback is set anyway so gpg never reaches for a tty it lacks.
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          printf '%s\n' "$BOT_GPG_PRIVATE_KEY" | gpg --batch --import
+          fpr=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/{print $10; exit}')
+          test -n "$fpr"
+          echo "signing as $fpr"
+          git config --global user.signingkey "$fpr"
+          git config --global gpg.format openpgp
+          git config --global commit.gpgsign true
+
+      # Writes VERSION, prepends to CHANGELOG.md, commits both with [skip ci]
+      # (so this workflow does not retrigger itself), tags, and publishes the
+      # GitHub Release. Nothing is published to npm: package.json is private and
+      # @semantic-release/npm is not in the plugin list.
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # semantic-release defaults the committer to semantic-release-bot
+          # <semantic-release-bot@martynus.net>. GitHub only marks a signature
+          # verified when the committer email is a VERIFIED email on the account
+          # and matches the signing key's UID, so both have to be this identity.
+          # The <user>@users.noreply.github.com form is verified by construction.
+          GIT_AUTHOR_NAME: kon release bot
+          GIT_AUTHOR_EMAIL: tibatko509@users.noreply.github.com
+          GIT_COMMITTER_NAME: kon release bot
+          GIT_COMMITTER_EMAIL: tibatko509@users.noreply.github.com

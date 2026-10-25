@@ -1,0 +1,20 @@
+# Site-specific overrides belong in ~/.config/kon/config.zsh, never in the repo.
+config.local.zsh
+
+# Project knowledge belongs one level up, in the workspace parent, and is not
+# version controlled. This is a guard: if it ever lands here it must not be
+# committed, because those notes name real accounts and clusters.
+thoughts/
+
+# Editor / OS noise
+.DS_Store
+*.swp
+
+# Test scratch
+test/tmp/
+
+# semantic-release toolchain (devDependencies only, nothing is published)
+node_modules/
+
+# Release artifacts, built by scripts/package.zsh and uploaded by the release job
+dist/

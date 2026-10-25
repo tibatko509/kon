@@ -1,0 +1,160 @@
+<mxfile host="drawio" type="device" version="26.0.9">
+  <diagram id="kon-architecture" name="kon architecture">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="880" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="kon: one command from a shell to a private cluster or database" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#1a2733;" vertex="1" parent="1">
+          <mxGeometry x="40" y="16" width="900" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="No VPN, no bastion login, no public endpoint. The control plane is called over normal HTTPS; the data path never leaves the VPC except through an SSM session." style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#5b6b7a;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="1080" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="shell" value="&lt;b&gt;your shell&lt;/b&gt;&lt;br&gt;~/.zshrc sources init.zsh&lt;br&gt;&lt;font color='#5b6b7a'&gt;kon, kcloud, completion, RPROMPT&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef3f8;strokeColor=#7a93ab;fontSize=12;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="110" width="270" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="kon" value="&lt;b&gt;kon&lt;/b&gt;&lt;br&gt;&lt;font color='#3d5a75'&gt;discover target &#8594; pick jump host &#8594; open tunnel&lt;br&gt;derive a stable local port &#8594; rewrite kubeconfig&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbe8f5;strokeColor=#3d6fa5;strokeWidth=2;fontSize=12;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="380" y="110" width="400" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="state" value="&lt;b&gt;local state&lt;/b&gt;&lt;br&gt;~/.local/state/kon/&lt;br&gt;&lt;font color='#5b6b7a'&gt;eks.tsv, rds.tsv, bastion.tsv&lt;br&gt;logs/, tunnel.&amp;lt;port&amp;gt;.pid&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4f1e8;strokeColor=#a8935e;fontSize=12;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="840" y="110" width="290" height="86" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-shell-kon" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;endArrow=block;endFill=1;strokeColor=#3d6fa5;fontSize=11;fontColor=#3d6fa5;" edge="1" parent="1" source="shell" target="kon">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-kon-state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;dashed=1;endArrow=block;endFill=1;strokeColor=#a8935e;fontSize=11;fontColor=#8a7440;" edge="1" parent="1" source="kon" target="state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lane-control" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b9c6d2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="240" width="480" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="lane-control-title" value="&lt;b&gt;AWS control plane&lt;/b&gt;  &lt;font color='#5b6b7a'&gt;public HTTPS, your SSO token, no tunnel needed&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#33475b;" vertex="1" parent="1">
+          <mxGeometry x="72" y="248" width="456" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="svc-sts" value="&lt;b&gt;STS&lt;/b&gt; / SSO token cache&lt;br&gt;&lt;font color='#5b6b7a'&gt;who am I, is the token still good&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdf1e3;strokeColor=#c98b3f;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="282" width="440" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-eks" value="&lt;b&gt;EKS&lt;/b&gt; ListClusters, DescribeCluster&lt;br&gt;&lt;font color='#5b6b7a'&gt;name, ARN, private endpoint, certificate&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdf1e3;strokeColor=#c98b3f;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="346" width="440" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-rds" value="&lt;b&gt;RDS&lt;/b&gt; DescribeDBClusters, DescribeDBInstances&lt;br&gt;&lt;font color='#5b6b7a'&gt;endpoint, port, VPC, member instances&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdf1e3;strokeColor=#c98b3f;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="410" width="440" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-ssm" value="&lt;b&gt;EC2 + SSM&lt;/b&gt; DescribeInstances, DescribeInstanceInformation&lt;br&gt;&lt;font color='#5b6b7a'&gt;find the jump host: SSM-managed, no EKS node tags&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdf1e3;strokeColor=#c98b3f;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="474" width="440" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-start" value="&lt;b&gt;SSM StartSession&lt;/b&gt; host=&amp;lt;instance&amp;gt;, port=&amp;lt;target&amp;gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdf1e3;strokeColor=#c98b3f;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="532" width="440" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-kon-control" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.18;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;dashed=1;endArrow=block;endFill=1;strokeColor=#c98b3f;fontSize=11;fontColor=#a06a26;" edge="1" parent="1" source="kon" target="svc-sts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-1" value="1  discover, resolve, choose" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#a06a26;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="250" y="208" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lane-data" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9bbf9b;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="620" y="240" width="520" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="lane-data-title" value="&lt;b&gt;Data path&lt;/b&gt;  &lt;font color='#5b6b7a'&gt;the VPC stays private; nothing listens on the internet&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#2f4f37;" vertex="1" parent="1">
+          <mxGeometry x="632" y="248" width="496" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="plugin" value="&lt;b&gt;session-manager-plugin&lt;/b&gt;&lt;br&gt;&lt;font color='#5b6b7a'&gt;spawned by aws ssm start-session, forwards TCP&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f2e8;strokeColor=#5f9a63;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="282" width="480" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="ssm-svc" value="&lt;b&gt;SSM service&lt;/b&gt;&lt;br&gt;&lt;font color='#5b6b7a'&gt;outbound from the instance, no inbound port opened&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f2e8;strokeColor=#5f9a63;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="346" width="480" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="bastion" value="&lt;b&gt;jump host&lt;/b&gt;  EC2 inside the VPC&lt;br&gt;&lt;font color='#5b6b7a'&gt;chosen per account, region and VPC, remembered as a Name tag&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f2e8;strokeColor=#5f9a63;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="410" width="480" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="targets" value="&lt;b&gt;private targets&lt;/b&gt;&lt;br&gt;&lt;font color='#5b6b7a'&gt;EKS API :443, or RDS :5432, reachable only from inside the VPC&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f2e8;strokeColor=#5f9a63;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="474" width="480" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-kon-plugin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.62;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;endArrow=block;endFill=1;strokeColor=#5f9a63;strokeWidth=2;fontSize=11;fontColor=#2f4f37;" edge="1" parent="1" source="kon" target="plugin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-2" value="2  open the session" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#2f4f37;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="720" y="208" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-plugin-ssm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;endArrow=block;endFill=1;strokeColor=#5f9a63;" edge="1" parent="1" source="plugin" target="ssm-svc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-ssm-bastion" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;endArrow=block;endFill=1;strokeColor=#5f9a63;" edge="1" parent="1" source="ssm-svc" target="bastion">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-bastion-targets" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;endArrow=block;endFill=1;strokeColor=#5f9a63;" edge="1" parent="1" source="bastion" target="targets">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="loopback" value="&lt;b&gt;127.0.0.1:&amp;lt;port&amp;gt;&lt;/b&gt;   &lt;font color='#5b6b7a'&gt;the port is derived from the target's account and name (FNV-1a), so it is the same in every shell and on every machine:&lt;br&gt;18000-18999 for clusters, 19000-19999 for databases, and several tunnels can be open at once&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef3f8;strokeColor=#3d6fa5;strokeWidth=2;fontSize=12;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="600" width="1080" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-targets-loopback" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;endArrow=block;endFill=1;strokeColor=#5f9a63;strokeWidth=2;fontSize=11;fontColor=#2f4f37;" edge="1" parent="1" source="targets" target="loopback">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-3" value="3  forwarded back as a local socket" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#2f4f37;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="790" y="580" width="250" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cons-kubectl" value="&lt;b&gt;kubectl&lt;/b&gt;&lt;br&gt;&lt;font color='#5b6b7a'&gt;server 127.0.0.1:&amp;lt;port&amp;gt;&lt;br&gt;tls-server-name keeps SNI valid&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7a93ab;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="710" width="330" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-db" value="&lt;b&gt;psql, or your app&lt;/b&gt;&lt;br&gt;&lt;font color='#5b6b7a'&gt;127.0.0.1:&amp;lt;port&amp;gt; behaves like a local database&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7a93ab;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="410" y="710" width="330" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-tf" value="&lt;b&gt;Terraform&lt;/b&gt;&lt;br&gt;&lt;font color='#5b6b7a'&gt;the one case that needs /etc/hosts: its provider has no tls_server_name&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7a93ab;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="760" y="710" width="380" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-loopback-cons" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;endArrow=block;endFill=1;strokeColor=#7a93ab;fontSize=11;fontColor=#3d5a75;" edge="1" parent="1" source="loopback" target="cons-db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-4" value="4  and kon has already pointed kubeconfig and the CLI at it" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#3d5a75;" vertex="1" parent="1">
+          <mxGeometry x="60" y="680" width="480" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-dashed" style="endArrow=block;html=1;dashed=1;strokeColor=#a06a26;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="leg-d1" target="leg-d2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-d1" value="" style="rounded=0;html=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="60" y="806" width="1" height="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-d2" value="" style="rounded=0;html=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="120" y="806" width="1" height="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-d1b" value="" style="rounded=0;html=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="60" y="833" width="1" height="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-d2b" value="" style="rounded=0;html=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="120" y="833" width="1" height="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-dashed-label" value="HTTPS API call, made by kon itself" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#5b6b7a;" vertex="1" parent="1">
+          <mxGeometry x="132" y="796" width="300" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-solid" style="endArrow=block;html=1;strokeColor=#5f9a63;strokeWidth=2;" edge="1" parent="1" source="leg-s1" target="leg-s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-s1" value="" style="rounded=0;html=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="60" y="829" width="1" height="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-s2" value="" style="rounded=0;html=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="120" y="829" width="1" height="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-solid-label" value="forwarded traffic, client to target" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#5b6b7a;" vertex="1" parent="1">
+          <mxGeometry x="132" y="819" width="300" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-note" value="kon writes: ~/.kube/config (with one backup per run), the state files above, and optionally a managed block in /etc/hosts. Nothing else." style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#5b6b7a;" vertex="1" parent="1">
+          <mxGeometry x="470" y="806" width="680" height="44" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

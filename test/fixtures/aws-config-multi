@@ -1,0 +1,15 @@
+[sso-session alpha]
+sso_start_url = https://alpha.awsapps.com/start
+sso_region = eu-west-1
+
+[sso-session beta]
+sso_start_url = https://beta.awsapps.com/start
+sso_region = us-east-1
+
+[profile a1]
+sso_session = alpha
+sso_account_id = 111111111111
+
+[profile b1]
+sso_session = beta
+sso_account_id = 222222222222

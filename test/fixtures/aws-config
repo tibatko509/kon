@@ -1,0 +1,36 @@
+# Fixture: one SSO session, so discovery is unambiguous.
+[sso-session demo]
+sso_start_url = https://demo.awsapps.com/start
+sso_region = eu-west-1
+sso_registration_scopes = sso:account:access
+
+[profile demo-dev]
+sso_session = demo
+sso_account_id = 111111111111
+sso_role_name = SomeRole
+region = eu-west-1
+output = json
+
+[profile demo-prod]
+sso_session = demo
+sso_account_id = 222222222222
+sso_role_name = SomeRole
+region = us-east-1
+output = json
+
+# No region: must still be listed, with "-" as the region.
+[profile demo-noregion]
+sso_session = demo
+sso_account_id = 333333333333
+sso_role_name = SomeRole
+
+# Different session: must be excluded.
+[profile other]
+sso_session = elsewhere
+sso_account_id = 444444444444
+sso_role_name = SomeRole
+
+# No sso_session at all (credential_process style): must be excluded.
+[profile keyless]
+credential_process = /bin/echo {}
+region = eu-west-1
