@@ -251,6 +251,49 @@ Requirements: `zsh`, `awscli` v2, `session-manager-plugin`, `kubectl`,
 `python3`, `lsof`. `fzf` is optional but makes `kon` with no argument
 interactive.
 
+### Homebrew
+
+```bash
+brew install tibatko509/tap/kon
+```
+
+Then run the installer it ships once, which writes the `~/.zshrc` block in the
+right place:
+
+```bash
+"$(brew --prefix)/opt/kon/share/kon/scripts/install.zsh"
+exec zsh
+```
+
+Use the `opt` path, not a `Cellar` one: `brew cleanup` deletes the versioned
+directory at the next upgrade, and `opt` follows it.
+
+The formula declares `fzf`. The three things Homebrew cannot express as
+dependencies are in its caveats, because `session-manager-plugin` is a cask and
+`awscli`/`kubernetes-cli` are only needed for some workflows:
+
+```bash
+brew install awscli
+brew install --cask session-manager-plugin
+brew install kubernetes-cli
+```
+
+Upgrade with `brew upgrade kon`, then `exec zsh`.
+
+### Debian and Ubuntu
+
+```bash
+sudo apt install ./kon_<version>_all.deb
+"$(dirname "$(dpkg -L kon | grep init.zsh)")/scripts/install.zsh"
+```
+
+The `.deb` installs the sources under `/usr/share/kon` and declares `zsh` and
+`python3`, with `lsof` and `fzf` recommended. Every release attaches it, and
+`kon --update` prints the apt command rather than pulling a git checkout it does
+not have.
+
+### From a git checkout
+
 ```bash
 brew install awscli kubectl kubectx fzf
 brew install --cask session-manager-plugin
@@ -259,7 +302,7 @@ brew install --cask session-manager-plugin
 Then:
 
 ```bash
-git clone <this-repo> ~/kon
+git clone https://github.com/tibatko509/kon ~/kon
 ~/kon/scripts/install.zsh
 exec zsh
 ```

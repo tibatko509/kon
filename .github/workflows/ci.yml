@@ -94,6 +94,40 @@ jobs:
           test ! -e /usr/share/kon
           zsh -f -c 'print -r -- "zsh -f still starts"'
 
+  formula:
+    # A formula that installs is the only proof the Homebrew channel works, and
+    # macOS runners are free once this repository is public.
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render the formula for the released version
+        run: |
+          set -e
+          version="$(cat VERSION)"
+          tag="v${version}"
+          sha="$(curl -fsSL "https://github.com/tibatko509/kon/archive/refs/tags/${tag}.tar.gz" \
+                 | shasum -a 256 | cut -d' ' -f1)"
+          ./scripts/render-formula.zsh "${version}" "${sha}" build/kon.rb
+
+      - name: Install, test and audit it from a local tap
+        run: |
+          set -e
+          tap="${RUNNER_TEMP}/tap"
+          mkdir -p "${tap}/Formula"
+          cp build/kon.rb "${tap}/Formula/kon.rb"
+          git -C "${tap}" init -q -b main
+          git -C "${tap}" add -A
+          git -C "${tap}" -c user.name=ci -c user.email=ci@example.invalid \
+              -c commit.gpgsign=false commit -qm ci
+          brew tap tibatko509/formula-test "file://${tap}"
+          brew install --build-from-source tibatko509/formula-test/kon
+          brew test tibatko509/formula-test/kon
+          brew audit --strict tibatko509/formula-test/kon
+          zsh -f -c 'source "$(brew --prefix)/opt/kon/share/kon/init.zsh" && kon doctor' || true
+          brew uninstall kon
+
   release:
     # Only ever after the suite is green, so a broken commit cannot cut a tag.
     needs: test
@@ -158,3 +192,39 @@ jobs:
           GIT_AUTHOR_EMAIL: tibatko509@users.noreply.github.com
           GIT_COMMITTER_NAME: kon release bot
           GIT_COMMITTER_EMAIL: tibatko509@users.noreply.github.com
+
+      # Homebrew needs a formula whose url and sha256 match a released tag, and
+      # the tap is a separate repository, so it is pushed here rather than from
+      # a `release: published` workflow: a release created by GITHUB_TOKEN does
+      # not start one.
+      - name: Sync the Homebrew formula to the tap
+        env:
+          TAP_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+        run: |
+          set -e
+          version="$(cat VERSION)"
+          tag="v${version}"
+          if ! git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "no tag for ${version}, nothing to publish"
+            exit 0
+          fi
+          sha="$(curl -fsSL "https://github.com/tibatko509/kon/archive/refs/tags/${tag}.tar.gz" \
+                 | shasum -a 256 | cut -d' ' -f1)"
+          ./scripts/render-formula.zsh "${version}" "${sha}" "${RUNNER_TEMP}/kon.rb"
+          install -m 600 /dev/null "$RUNNER_TEMP/tapkey"
+          printf '%s\n' "$TAP_DEPLOY_KEY" > "$RUNNER_TEMP/tapkey"
+          export GIT_SSH_COMMAND="ssh -i $RUNNER_TEMP/tapkey -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git clone --depth 1 git@github.com:tibatko509/homebrew-tap.git "$RUNNER_TEMP/tap"
+          cp "${RUNNER_TEMP}/kon.rb" "$RUNNER_TEMP/tap/Formula/kon.rb"
+          cd "$RUNNER_TEMP/tap"
+          if git diff --quiet; then
+            echo "tap already at ${version}"
+            exit 0
+          fi
+          git -c user.name="kon release bot" \
+              -c user.email="tibatko509@users.noreply.github.com" \
+              -c commit.gpgsign=false \
+              commit -qam "kon ${version}"
+          git push -q origin HEAD:main
+          echo "tap updated to ${version}"
+
